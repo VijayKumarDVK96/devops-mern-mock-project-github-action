@@ -31,7 +31,7 @@ jobs:
         run: |
           until nc -z localhost 27017; do
             echo "Waiting for MongoDB..."
-            sleep 2
+            sleep 5
           done
           echo "✅ MongoDB is up and running"
 

@@ -12,10 +12,7 @@ const Task = mongoose.model('Task', taskSchema);
 
 async function seedTasks() {
     try {
-        await mongoose.connect(MONGO_URL, {
-            useNewUrlParser: true,
-            useUnifiedTopology: true,
-        });
+        await mongoose.connect(MONGO_URL);
 
         console.log('Connected to MongoDB');
 
