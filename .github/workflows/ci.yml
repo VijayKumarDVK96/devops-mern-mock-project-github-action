@@ -2,45 +2,55 @@ name: MERN CI  # 👈 Workflow name shown in GitHub Actions tab
 
 on:
   push:
-    branches: [main]  # 👈 Triggers workflow whenever code is pushed to 'main' branch
+    branches: [main]  # 👈 Runs this workflow only when code is pushed to 'main' branch
 
 jobs:
-  mongo-init-test:  # 👈 Defines a single job named 'mongo-init-test'
-    runs-on: ubuntu-latest  # 👈 Uses latest Ubuntu runner as virtual environment
+  mongo-init-test:
+    runs-on: ubuntu-latest  # 👈 Uses latest Ubuntu runner as the build environment
     
     env:
-      PORT: ${{ secrets.PORT }}  # 👈 Loads environment variables securely from GitHub Secrets
+      PORT: ${{ secrets.PORT }}          # 👈 Securely loads environment variables from GitHub Secrets
       MONGO_URI: ${{ secrets.MONGO_URI }}
       JWT_SECRET: ${{ secrets.JWT_SECRET }}
 
     services:
-      mongo:  # 👈 Declares a MongoDB service container
-        image: mongo  # 👈 Uses official MongoDB Docker image
-        ports: ['27017:27017']  # 👈 Exposes MongoDB port for local access inside the job
+      mongo:  # 👈 Starts a MongoDB service container for testing
+        image: mongo  # 👈 Uses the official MongoDB Docker image
+        ports: ['27017:27017']  # 👈 Exposes MongoDB default port so the app can connect
     
     steps:
-      - name: Checkout Repository  # 👈 Step 1: Pulls your repo code into the runner
+      - name: Checkout Repository  # 👈 Step 1: Pulls repository code into the runner
         uses: actions/checkout@v5  # 👈 Official GitHub Action for checking out code
 
       - name: Setup Node.js  # 👈 Step 2: Prepares Node.js environment
-        uses: actions/setup-node@v3  # 👈 Official Node setup action
-        with: 
-          node-version: '18'  # 👈 Specifies Node.js version to use
+        uses: actions/setup-node@v3
+        with:
+          node-version: '18'  # 👈 Specifies Node.js version compatible with your MERN stack
 
-      - name: Waiting for MongoDB to be ready  # 👈 Step 3: Ensures MongoDB container is fully running before use
-        run: |  # 👇 Simple loop to check MongoDB readiness using netcat (nc)
+      - name: Waiting for MongoDB to be ready  # 👈 Step 3: Ensures MongoDB container is ready before proceeding
+        run: |
           until nc -z localhost 27017; do
             echo "Waiting for MongoDB..."
             sleep 2
           done
-          echo "MongoDB is up"
+          echo "✅ MongoDB is up and running"
 
-      - name: Seed MongoDB  # 👈 Step 4: Prepares test data in MongoDB
-        working-directory: ./backend  # 👈 Changes directory to backend folder
-        run: |  # 👈 Installs backend dependencies and Runs custom seeding script to populate DB
-          npm install
-          node seedTasksData.js
+      - name: Install Dependencies  # 👈 Step 4: Installs project dependencies cleanly
+        working-directory: ./backend  # 👈 Targets backend folder for install
+        run: |
+          npm install --no-fund --no-audit  # 👈 Skips funding/audit messages to keep logs clean
 
-      - name: Running Backend Tests  # 👈 Step 5: Executes automated backend tests
+      - name: Check for Deprecated Packages  # 👈 Step 5: Checks and lists outdated/deprecated packages
         working-directory: ./backend
-        run: npm test  # 👈 Runs test scripts defined in package.json
+        run: |
+          echo "🔍 Checking for deprecated npm packages..."
+          npx npm-check-updates -d || true  # 👈 Lists deprecated packages but doesn’t fail the CI
+
+      - name: Seed MongoDB  # 👈 Step 6: Populates DB with sample/test data
+        working-directory: ./backend
+        run: |
+          node seedTasksData.js  # 👈 Runs your seed script to insert data
+
+      - name: Running Backend Tests  # 👈 Step 7: Executes backend test suite
+        working-directory: ./backend
+        run: npm test  # 👈 Runs tests defined in package.json
