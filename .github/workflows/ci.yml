@@ -1,65 +1,71 @@
-name: MERN CI  # 👈 Workflow name shown in GitHub Actions tab
+name: MERN CI
 
 on:
   push:
-    branches: [main]  # 👈 Runs this workflow only when code is pushed to 'main' branch
+    branches: [main]
 
 jobs:
   mongo-init-test:
-    runs-on: ubuntu-latest  # 👈 Uses latest Ubuntu runner as the build environment
+    runs-on: ubuntu-latest
     
     env:
-      PORT: ${{ secrets.PORT }}          # 👈 Securely loads environment variables from GitHub Secrets
+      PORT: ${{ secrets.PORT }}
       MONGO_URI: ${{ secrets.MONGO_URI }}
       JWT_SECRET: ${{ secrets.JWT_SECRET }}
 
     services:
-      mongo:  # 👈 Starts a MongoDB service container for testing
-        image: mongo:6.0  # 👈 Uses the official MongoDB Docker image
-        ports: ['27017:27017']  # 👈 Exposes MongoDB default port so the app can connect
-        options: >- # 👈 Ensures Mongo is healthy before CI proceeds
-          --health-cmd "mongo --eval 'db.runCommand({ ping: 1 })'"
-          --health-interval 5s
-          --health-timeout 5s
-          --health-retries 10
-    
-    steps:
-      - name: Checkout Repository  # 👈 Step 1: Pulls repository code into the runner
-        uses: actions/checkout@v5  # 👈 Official GitHub Action for checking out code
+      mongo:
+        image: mongo:6.0
+        ports: ['27017:27017']
+        options: >-
+          --health-cmd="mongosh --eval 'db.runCommand({ ping: 1 })'"
+          --health-interval=5s
+          --health-timeout=5s
+          --health-retries=10
 
-      - name: Setup Node.js  # 👈 Step 2: Prepares Node.js environment
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v5
+
+      - name: Setup Node.js
         uses: actions/setup-node@v3
         with:
-          node-version: '18'  # 👈 Specifies Node.js version compatible with your MERN stack
+          node-version: '18'
 
-      - name: Waiting for MongoDB to be ready  # 👈 Step 3: Ensures MongoDB container is ready before proceeding
+      - name: Wait for MongoDB to be ready
         run: |
-          echo "⏳ Waiting for MongoDB to be ready..."
+          echo "⏳ Waiting for MongoDB to accept connections on mongo:27017..."
           for i in {1..20}; do
             if nc -z mongo 27017; then
-              echo "✅ MongoDB is accepting connections!"
-              break
+              echo "✅ MongoDB is accepting connections"
+              exit 0
             fi
-            echo "Still waiting ($i)..."
+            echo "Still waiting ($i/20)..."
             sleep 3
           done
+          echo "❌ MongoDB did not become ready in time" >&2
+          exit 1
 
-      - name: Install Dependencies  # 👈 Step 4: Installs project dependencies cleanly
-        working-directory: ./backend  # 👈 Targets backend folder for install, Skips funding/audit messages to keep logs clean
-        run: |
-          npm install --no-fund --no-audit
-
-      - name: Check for Deprecated Packages  # 👈 Step 5: Checks and lists outdated/deprecated packages and Lists deprecated packages but doesn’t fail the CI
+      - name: Install Dependencies (backend)
         working-directory: ./backend
         run: |
-          echo "🔍 Checking for deprecated npm packages..."
-          npx npm-check-updates -d
+          # use npm ci for deterministic installs in CI (requires package-lock.json)
+          npm ci --no-fund --no-audit
 
-      - name: Seed MongoDB  # 👈 Step 6: Populates DB with sample/test data
+      - name: Check for Deprecated / Outdated Packages
         working-directory: ./backend
         run: |
+          echo "🔍 Checking for outdated/deprecated packages (report only)"
+          # npm-check-updates prints info and may exit non-zero; do not fail the job
+          npx npm-check-updates -d || true
+
+      - name: Seed MongoDB
+        # Ensure this path matches where seedTasksData.js actually lives in your repo.
+        working-directory: ./backend
+        run: |
+          echo "🌱 Seeding MongoDB data using MONGO_URI=$MONGO_URI"
           node seedTasksData.js
 
-      - name: Running Backend Tests  # 👈 Step 7: Executes backend test suite
+      - name: Run Backend Tests
         working-directory: ./backend
-        run: npm test  # 👈 Runs tests defined in package.json
+        run: npm test
