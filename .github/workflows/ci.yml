@@ -36,20 +36,20 @@ jobs:
           echo "✅ MongoDB is up and running"
 
       - name: Install Dependencies  # 👈 Step 4: Installs project dependencies cleanly
-        working-directory: ./backend  # 👈 Targets backend folder for install
+        working-directory: ./backend  # 👈 Targets backend folder for install, Skips funding/audit messages to keep logs clean
         run: |
-          npm install --no-fund --no-audit  # 👈 Skips funding/audit messages to keep logs clean
+          npm install --no-fund --no-audit
 
-      - name: Check for Deprecated Packages  # 👈 Step 5: Checks and lists outdated/deprecated packages
+      - name: Check for Deprecated Packages  # 👈 Step 5: Checks and lists outdated/deprecated packages and Lists deprecated packages but doesn’t fail the CI
         working-directory: ./backend
         run: |
           echo "🔍 Checking for deprecated npm packages..."
-          npx npm-check-updates -d || true  # 👈 Lists deprecated packages but doesn’t fail the CI
+          npx npm-check-updates -d
 
       - name: Seed MongoDB  # 👈 Step 6: Populates DB with sample/test data
         working-directory: ./backend
         run: |
-          node seedTasksData.js  # 👈 Runs your seed script to insert data
+          node seedTasksData.js
 
       - name: Running Backend Tests  # 👈 Step 7: Executes backend test suite
         working-directory: ./backend
