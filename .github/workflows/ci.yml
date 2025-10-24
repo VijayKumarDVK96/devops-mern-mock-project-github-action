@@ -17,6 +17,11 @@ jobs:
       mongo:  # 👈 Starts a MongoDB service container for testing
         image: mongo  # 👈 Uses the official MongoDB Docker image
         ports: ['27017:27017']  # 👈 Exposes MongoDB default port so the app can connect
+        options: >- # 👈 Ensures Mongo is healthy before CI proceeds
+          --health-cmd "mongo --eval 'db.runCommand({ ping: 1 })'"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
     
     steps:
       - name: Checkout Repository  # 👈 Step 1: Pulls repository code into the runner
