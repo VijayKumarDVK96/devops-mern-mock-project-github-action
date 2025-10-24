@@ -15,7 +15,7 @@ jobs:
 
     services:
       mongo:  # 👈 Starts a MongoDB service container for testing
-        image: mongo  # 👈 Uses the official MongoDB Docker image
+        image: mongo:6.0  # 👈 Uses the official MongoDB Docker image
         ports: ['27017:27017']  # 👈 Exposes MongoDB default port so the app can connect
         options: >- # 👈 Ensures Mongo is healthy before CI proceeds
           --health-cmd "mongo --eval 'db.runCommand({ ping: 1 })'"
@@ -34,11 +34,15 @@ jobs:
 
       - name: Waiting for MongoDB to be ready  # 👈 Step 3: Ensures MongoDB container is ready before proceeding
         run: |
-          until nc -z localhost 27017; do
-            echo "Waiting for MongoDB..."
-            sleep 5
+          echo "⏳ Waiting for MongoDB to be ready..."
+          for i in {1..20}; do
+            if nc -z mongo 27017; then
+              echo "✅ MongoDB is accepting connections!"
+              break
+            fi
+            echo "Still waiting ($i)..."
+            sleep 3
           done
-          echo "✅ MongoDB is up and running"
 
       - name: Install Dependencies  # 👈 Step 4: Installs project dependencies cleanly
         working-directory: ./backend  # 👈 Targets backend folder for install, Skips funding/audit messages to keep logs clean
