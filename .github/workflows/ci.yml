@@ -49,8 +49,8 @@ jobs:
       - name: Install Dependencies (backend)
         working-directory: ./backend
         run: |
-          # use npm ci for deterministic installs in CI (requires package-lock.json)
-          npm ci --no-fund --no-audit
+          # use npm install for deterministic installs in CI (requires package-lock.json)
+          npm install --no-fund --no-audit
 
       - name: Check for Deprecated / Outdated Packages
         working-directory: ./backend
